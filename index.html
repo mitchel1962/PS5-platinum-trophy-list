@@ -1,0 +1,866 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Game Data Visualization</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        .game-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.2);
+        }
+        .difficulty-1 { background-color: #4ade80; }
+        .difficulty-2 { background-color: #60a5fa; }
+        .difficulty-3 { background-color: #fbbf24; }
+        .difficulty-4 { background-color: #f97316; }
+        .difficulty-5 { background-color: #ef4444; }
+        .difficulty-6 { background-color: #a855f7; }
+        .difficulty-7 { background-color: #ec4899; }
+        .difficulty-8 { background-color: #64748b; }
+        .difficulty-9 { background-color: #475569; }
+        .difficulty-10 { background-color: #1e293b; }
+    </style>
+</head>
+<body class="bg-gray-100 min-h-screen">
+    <div class="container mx-auto px-4 py-8">
+        <header class="mb-12 text-center">
+            <h1 class="text-4xl font-bold text-indigo-800 mb-2">Game Data Explorer</h1>
+            <p class="text-lg text-gray-600">Interactive visualization of game difficulty, playtime, and scores</p>
+        </header>
+
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-12">
+            <!-- Filters -->
+            <div class="bg-white rounded-xl shadow-md p-6">
+                <h2 class="text-xl font-semibold mb-4 text-gray-800">Filters</h2>
+                
+                <div class="mb-4">
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Difficulty Range</label>
+                    <div class="flex items-center space-x-4">
+                        <input type="range" id="difficultyRange" min="1" max="10" value="10" class="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer">
+                        <span id="difficultyValue" class="text-sm font-medium text-gray-700">1-10</span>
+                    </div>
+                </div>
+                
+                <div class="mb-4">
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Hours Range</label>
+                    <div class="flex items-center space-x-4">
+                        <input type="range" id="hoursRange" min="1" max="550" value="550" class="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer">
+                        <span id="hoursValue" class="text-sm font-medium text-gray-700">1-550</span>
+                    </div>
+                </div>
+                
+                <div class="mb-4">
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Score Range</label>
+                    <div class="flex items-center space-x-4">
+                        <input type="range" id="scoreRange" min="10" max="3500" value="3500" class="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer">
+                        <span id="scoreValue" class="text-sm font-medium text-gray-700">10-3500</span>
+                    </div>
+                </div>
+                
+                <div class="mb-4">
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Search</label>
+                    <input type="text" id="searchInput" placeholder="Search games..." class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
+                </div>
+                
+                <button id="resetFilters" class="w-full bg-gray-200 hover:bg-gray-300 text-gray-800 font-medium py-2 px-4 rounded-lg transition duration-200">
+                    Reset Filters
+                </button>
+            </div>
+            
+            <!-- Stats -->
+            <div class="bg-white rounded-xl shadow-md p-6">
+                <h2 class="text-xl font-semibold mb-4 text-gray-800">Statistics</h2>
+                
+                <div class="grid grid-cols-2 gap-4 mb-6">
+                    <div class="bg-indigo-50 p-4 rounded-lg">
+                        <p class="text-sm text-indigo-600">Total Games</p>
+                        <p id="totalGames" class="text-2xl font-bold text-indigo-800">0</p>
+                    </div>
+                    <div class="bg-green-50 p-4 rounded-lg">
+                        <p class="text-sm text-green-600">Avg Difficulty</p>
+                        <p id="avgDifficulty" class="text-2xl font-bold text-green-800">0</p>
+                    </div>
+                    <div class="bg-blue-50 p-4 rounded-lg">
+                        <p class="text-sm text-blue-600">Avg Hours</p>
+                        <p id="avgHours" class="text-2xl font-bold text-blue-800">0</p>
+                    </div>
+                    <div class="bg-purple-50 p-4 rounded-lg">
+                        <p class="text-sm text-purple-600">Avg Score</p>
+                        <p id="avgScore" class="text-2xl font-bold text-purple-800">0</p>
+                    </div>
+                </div>
+                
+                <div class="h-64">
+                    <canvas id="difficultyChart"></canvas>
+                </div>
+            </div>
+            
+            <!-- Top Games -->
+            <div class="bg-white rounded-xl shadow-md p-6">
+                <h2 class="text-xl font-semibold mb-4 text-gray-800">Top Games</h2>
+                
+                <div class="space-y-4">
+                    <div class="flex items-center justify-between p-3 bg-yellow-50 rounded-lg">
+                        <div class="flex items-center">
+                            <div class="w-8 h-8 rounded-full bg-yellow-500 flex items-center justify-center text-white font-bold mr-3">1</div>
+                            <p id="topGame1" class="font-medium">-</p>
+                        </div>
+                        <span id="topScore1" class="bg-yellow-100 text-yellow-800 px-2 py-1 rounded-full text-sm font-medium">0</span>
+                    </div>
+                    
+                    <div class="flex items-center justify-between p-3 bg-gray-100 rounded-lg">
+                        <div class="flex items-center">
+                            <div class="w-8 h-8 rounded-full bg-gray-400 flex items-center justify-center text-white font-bold mr-3">2</div>
+                            <p id="topGame2" class="font-medium">-</p>
+                        </div>
+                        <span id="topScore2" class="bg-gray-200 text-gray-800 px-2 py-1 rounded-full text-sm font-medium">0</span>
+                    </div>
+                    
+                    <div class="flex items-center justify-between p-3 bg-amber-50 rounded-lg">
+                        <div class="flex items-center">
+                            <div class="w-8 h-8 rounded-full bg-amber-500 flex items-center justify-center text-white font-bold mr-3">3</div>
+                            <p id="topGame3" class="font-medium">-</p>
+                        </div>
+                        <span id="topScore3" class="bg-amber-100 text-amber-800 px-2 py-1 rounded-full text-sm font-medium">0</span>
+                    </div>
+                </div>
+                
+                <div class="mt-6 h-64">
+                    <canvas id="scoreDistributionChart"></canvas>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Game Cards -->
+        <div class="mb-8">
+            <div class="flex justify-between items-center mb-4">
+                <h2 class="text-2xl font-bold text-gray-800">Games</h2>
+                <div class="flex space-x-2">
+                    <button id="sortByName" class="px-4 py-2 bg-gray-200 hover:bg-gray-300 rounded-lg text-sm font-medium">Sort by Name</button>
+                    <button id="sortByDifficulty" class="px-4 py-2 bg-gray-200 hover:bg-gray-300 rounded-lg text-sm font-medium">Sort by Difficulty</button>
+                    <button id="sortByHours" class="px-4 py-2 bg-gray-200 hover:bg-gray-300 rounded-lg text-sm font-medium">Sort by Hours</button>
+                    <button id="sortByScore" class="px-4 py-2 bg-gray-200 hover:bg-gray-300 rounded-lg text-sm font-medium">Sort by Score</button>
+                </div>
+            </div>
+            
+            <div id="gameContainer" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                <!-- Game cards will be inserted here by JavaScript -->
+            </div>
+        </div>
+        
+        <!-- Scatter Plot -->
+        <div class="bg-white rounded-xl shadow-md p-6 mb-8">
+            <h2 class="text-xl font-semibold mb-4 text-gray-800">Difficulty vs. Score</h2>
+            <div class="h-96">
+                <canvas id="scatterPlot"></canvas>
+            </div>
+        </div>
+        
+        <!-- Bubble Chart -->
+        <div class="bg-white rounded-xl shadow-md p-6">
+            <h2 class="text-xl font-semibold mb-4 text-gray-800">Game Value Analysis</h2>
+            <p class="text-sm text-gray-500 mb-4">Bubble size represents playtime hours</p>
+            <div class="h-96">
+                <canvas id="bubbleChart"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Game data
+        const gameData = [
+            { game: "Life is Strange", difficulty: 1, hours: 10, score: 10 },
+            { game: "A Way Out", difficulty: 2, hours: 7, score: 14 },
+            { game: "Hue", difficulty: 2, hours: 7, score: 14 },
+            { game: "Doki Doki Literature Club Plus!", difficulty: 1, hours: 15, score: 15 },
+            { game: "Nickelodeon All-Star Brawl", difficulty: 2, hours: 8, score: 16 },
+            { game: "Uno", difficulty: 2, hours: 8, score: 16 },
+            { game: "Rime", difficulty: 2, hours: 8, score: 16 },
+            { game: "Little Nightmares II", difficulty: 3, hours: 6, score: 18 },
+            { game: "Endling: Extinction is Forever", difficulty: 3, hours: 6, score: 18 },
+            { game: "Hitman 2", difficulty: 3, hours: 6, score: 18 },
+            { game: "Overcooked", difficulty: 4, hours: 5, score: 20 },
+            { game: "Ark: Survival Evolved", difficulty: 2, hours: 10, score: 20 },
+            { game: "Everybody's Gone to the Rapture", difficulty: 2, hours: 10, score: 20 },
+            { game: "Broken Age", difficulty: 2, hours: 10, score: 20 },
+            { game: "WWE 2K Battlegrounds", difficulty: 3, hours: 7, score: 21 },
+            { game: "The Deadly Tower of Monsters", difficulty: 3, hours: 7, score: 21 },
+            { game: "Concrete Genie", difficulty: 3, hours: 8, score: 24 },
+            { game: "Maneater", difficulty: 2, hours: 12, score: 24 },
+            { game: "Knowledge is Power", difficulty: 2, hours: 12, score: 24 },
+            { game: "Tales from the Borderlands", difficulty: 2, hours: 12, score: 24 },
+            { game: "Erica", difficulty: 3, hours: 9, score: 27 },
+            { game: "Sound Shapes", difficulty: 5, hours: 6, score: 30 },
+            { game: "Among Us", difficulty: 3, hours: 10, score: 30 },
+            { game: "Call of Duty: Modern Warfare", difficulty: 3, hours: 10, score: 30 },
+            { game: "Hitman", difficulty: 3, hours: 10, score: 30 },
+            { game: "Jak and Daxter: The Precursor Legacy", difficulty: 3, hours: 10, score: 30 },
+            { game: "Axiom Verge 2", difficulty: 2, hours: 15, score: 30 },
+            { game: "Bugsnax", difficulty: 2, hours: 15, score: 30 },
+            { game: "Until Dawn", difficulty: 2, hours: 15, score: 30 },
+            { game: "Letter Quest", difficulty: 2, hours: 15, score: 30 },
+            { game: "Heavenly Bodies", difficulty: 4, hours: 8, score: 32 },
+            { game: "Assassin's Creed Freedom Cry", difficulty: 4, hours: 8, score: 32 },
+            { game: "Not A Hero", difficulty: 6, hours: 6, score: 36 },
+            { game: "Child of Light", difficulty: 3, hours: 12, score: 36 },
+            { game: "RoboCop: Rogue City", difficulty: 3, hours: 12, score: 36 },
+            { game: "Little Nightmares", difficulty: 5, hours: 8, score: 40 },
+            { game: "Rollerdrome", difficulty: 4, hours: 10, score: 40 },
+            { game: "Sable", difficulty: 2, hours: 20, score: 40 },
+            { game: "Broforce", difficulty: 7, hours: 6, score: 42 },
+            { game: "Saints Row: Gat out of Hell", difficulty: 2, hours: 22, score: 44 },
+            { game: "Harry Potter: Quidditch Champions", difficulty: 3, hours: 15, score: 45 },
+            { game: "It Takes Two", difficulty: 3, hours: 15, score: 45 },
+            { game: "Sifu", difficulty: 3, hours: 15, score: 45 },
+            { game: "Overcooked! All You Can Eat", difficulty: 3, hours: 15, score: 45 },
+            { game: "BioShock", difficulty: 3, hours: 15, score: 45 },
+            { game: "Neon Chrome", difficulty: 3, hours: 15, score: 45 },
+            { game: "Stories: The Path of Destinies", difficulty: 3, hours: 15, score: 45 },
+            { game: "God of War III Remastered", difficulty: 4, hours: 12, score: 48 },
+            { game: "Amnesia Collection", difficulty: 3, hours: 16, score: 48 },
+            { game: "The Callisto Protocol", difficulty: 5, hours: 10, score: 50 },
+            { game: "Uncharted: Drake's Fortune Remastered", difficulty: 5, hours: 10, score: 50 },
+            { game: "Spy Chameleon", difficulty: 5, hours: 10, score: 50 },
+            { game: "Farming Simulator 22", difficulty: 1, hours: 50, score: 50 },
+            { game: "Foamstars", difficulty: 4, hours: 15, score: 60 },
+            { game: "Death's Door", difficulty: 4, hours: 15, score: 60 },
+            { game: "The Walking Dead: Saints & Sinners", difficulty: 4, hours: 15, score: 60 },
+            { game: "Crash Bandicoot: Warped", difficulty: 4, hours: 15, score: 60 },
+            { game: "Hyper Scape", difficulty: 4, hours: 15, score: 60 },
+            { game: "Five Nights at Freddy's: Security Breach", difficulty: 3, hours: 20, score: 60 },
+            { game: "Weird West", difficulty: 3, hours: 20, score: 60 },
+            { game: "PGA Tour 2K23", difficulty: 3, hours: 20, score: 60 },
+            { game: "Minecraft Dungeons", difficulty: 3, hours: 20, score: 60 },
+            { game: "A Plague Tale: Innocence", difficulty: 3, hours: 20, score: 60 },
+            { game: "Detroit: Become Human", difficulty: 3, hours: 20, score: 60 },
+            { game: "Monster Energy Supercross", difficulty: 3, hours: 20, score: 60 },
+            { game: "Portal Knights", difficulty: 3, hours: 20, score: 60 },
+            { game: "inFamous: Second Son", difficulty: 3, hours: 20, score: 60 },
+            { game: "LEGO Harry Potter Collection", difficulty: 2, hours: 30, score: 60 },
+            { game: "Until Dawn: Rush of Blood", difficulty: 7, hours: 10, score: 70 },
+            { game: "TorqueL", difficulty: 5, hours: 14, score: 70 },
+            { game: "Farming Simulator 19", difficulty: 2, hours: 35, score: 70 },
+            { game: "Ghostrunner", difficulty: 6, hours: 12, score: 72 },
+            { game: "Hyper Void", difficulty: 6, hours: 12, score: 72 },
+            { game: "Sonic Forces", difficulty: 5, hours: 15, score: 75 },
+            { game: "This War of Mine: The Little Ones", difficulty: 5, hours: 15, score: 75 },
+            { game: "Tiny Tina's Assault on Dragon Keep: A Wonderlands One-shot Adventure", difficulty: 3, hours: 25, score: 75 },
+            { game: "Dirt 5", difficulty: 3, hours: 25, score: 75 },
+            { game: "Ratchet & Clank", difficulty: 3, hours: 25, score: 75 },
+            { game: "Dungeon Punks", difficulty: 3, hours: 25, score: 75 },
+            { game: "Hot Wheels Unleashed 2: Turbocharged", difficulty: 4, hours: 20, score: 80 },
+            { game: "EA Sports PGA Tour", difficulty: 4, hours: 20, score: 80 },
+            { game: "Team Sonic Racing", difficulty: 4, hours: 20, score: 80 },
+            { game: "Control", difficulty: 4, hours: 20, score: 80 },
+            { game: "Virtua Fighter 5: Ultimate Showdown", difficulty: 2, hours: 40, score: 80 },
+            { game: "Crash Bandicoot 2: Cortex Strikes Back", difficulty: 6, hours: 14, score: 84 },
+            { game: "Pac-Man World Re-Pac", difficulty: 6, hours: 15, score: 90 },
+            { game: "Tails of Iron", difficulty: 6, hours: 15, score: 90 },
+            { game: "The Witness", difficulty: 6, hours: 15, score: 90 },
+            { game: "Table Top Racing: World Tour", difficulty: 6, hours: 15, score: 90 },
+            { game: "Saints Row", difficulty: 3, hours: 30, score: 90 },
+            { game: "Biomutant", difficulty: 3, hours: 30, score: 90 },
+            { game: "LEGO DC Super-Villains", difficulty: 3, hours: 30, score: 90 },
+            { game: "PGA Tour 2K21", difficulty: 3, hours: 30, score: 90 },
+            { game: "The Sims 4", difficulty: 3, hours: 30, score: 90 },
+            { game: "Uncharted 3: Drake's Deception Remastered", difficulty: 5, hours: 20, score: 100 },
+            { game: "Killing Floor 2", difficulty: 5, hours: 20, score: 100 },
+            { game: "Xdefiant", difficulty: 4, hours: 25, score: 100 },
+            { game: "Evil West", difficulty: 4, hours: 25, score: 100 },
+            { game: "A Plague Tale: Requiem", difficulty: 4, hours: 25, score: 100 },
+            { game: "Alan Wake", difficulty: 4, hours: 25, score: 100 },
+            { game: "Meet Your Maker", difficulty: 4, hours: 25, score: 100 },
+            { game: "Call of Duty: Modern Warfare 2 Campaign Remastered", difficulty: 4, hours: 25, score: 100 },
+            { game: "Rocket Arena", difficulty: 4, hours: 25, score: 100 },
+            { game: "Worms Battlegrounds", difficulty: 4, hours: 25, score: 100 },
+            { game: "Super Time Force Ultra", difficulty: 4, hours: 25, score: 100 },
+            { game: "Sonic Colors: Ultimate", difficulty: 4, hours: 25, score: 100 },
+            { game: "Titanfall 2", difficulty: 6, hours: 17, score: 102 },
+            { game: "Ninja Senki DX", difficulty: 7, hours: 15, score: 105 },
+            { game: "AEW: Fight Forever", difficulty: 3, hours: 35, score: 105 },
+            { game: "Nobody Saves the World", difficulty: 3, hours: 35, score: 105 },
+            { game: "Zombie Army 4: Dead War", difficulty: 3, hours: 35, score: 105 },
+            { game: "The Last of Us Part II", difficulty: 3, hours: 35, score: 105 },
+            { game: "The Swindle", difficulty: 8, hours: 15, score: 120 },
+            { game: "Ghostrunner 2", difficulty: 6, hours: 20, score: 120 },
+            { game: "Superhot", difficulty: 6, hours: 20, score: 120 },
+            { game: "BioShock Infinite", difficulty: 6, hours: 20, score: 120 },
+            { game: "Iconoclasts", difficulty: 6, hours: 20, score: 120 },
+            { game: "Battlefield 1", difficulty: 4, hours: 30, score: 120 },
+            { game: "Sparkle 2", difficulty: 4, hours: 30, score: 120 },
+            { game: "Foul Play", difficulty: 4, hours: 30, score: 120 },
+            { game: "The Crew 2", difficulty: 4, hours: 30, score: 120 },
+            { game: "Tearaway Unfolded", difficulty: 4, hours: 30, score: 120 },
+            { game: "Ghostwire: Tokyo", difficulty: 3, hours: 40, score: 120 },
+            { game: "Just Cause 4", difficulty: 3, hours: 40, score: 120 },
+            { game: "Middle-earth: Shadow of War", difficulty: 3, hours: 40, score: 120 },
+            { game: "Horizon Zero Dawn", difficulty: 3, hours: 40, score: 120 },
+            { game: "Steelrising", difficulty: 5, hours: 25, score: 125 },
+            { game: "Resident Evil 7: Biohazard", difficulty: 5, hours: 25, score: 125 },
+            { game: "FIFA 16", difficulty: 5, hours: 25, score: 125 },
+            { game: "LittleBigPlanet 3", difficulty: 5, hours: 25, score: 125 },
+            { game: "Resident Evil 0", difficulty: 5, hours: 25, score: 125 },
+            { game: "Crash Bandicoot", difficulty: 7, hours: 18, score: 126 },
+            { game: "Uncharted 2: Among Thieves Remastered", difficulty: 9, hours: 15, score: 135 },
+            { game: "Plants vs. Zombies: Garden Warfare 2", difficulty: 3, hours: 45, score: 135 },
+            { game: "Generation Zero", difficulty: 4, hours: 35, score: 140 },
+            { game: "Kung Fu Panda: Showdown of Legendary Legends", difficulty: 4, hours: 35, score: 140 },
+            { game: "Zombi", difficulty: 6, hours: 24, score: 144 },
+            { game: "Battlefield Hardline", difficulty: 4, hours: 36, score: 144 },
+            { game: "EA Sports UFC 4", difficulty: 6, hours: 25, score: 150 },
+            { game: "Streets of Rage 4", difficulty: 6, hours: 25, score: 150 },
+            { game: "Mafia", difficulty: 6, hours: 25, score: 150 },
+            { game: "Mortal Shell", difficulty: 6, hours: 25, score: 150 },
+            { game: "Destruction AllStars", difficulty: 6, hours: 25, score: 150 },
+            { game: "The Last Guardian", difficulty: 6, hours: 25, score: 150 },
+            { game: "Onrush", difficulty: 6, hours: 25, score: 150 },
+            { game: "Knack", difficulty: 6, hours: 25, score: 150 },
+            { game: "RIGS: Mechanized Combat League", difficulty: 6, hours: 25, score: 150 },
+            { game: "Sackboy: A Big Adventure", difficulty: 5, hours: 30, score: 150 },
+            { game: "Descenders", difficulty: 5, hours: 30, score: 150 },
+            { game: "Hot Wheels Unleashed", difficulty: 5, hours: 30, score: 150 },
+            { game: "Shadow of the Tomb Raider", difficulty: 5, hours: 30, score: 150 },
+            { game: "Call of Duty: Modern Warfare Remastered", difficulty: 5, hours: 30, score: 150 },
+            { game: "FIFA 17", difficulty: 5, hours: 30, score: 150 },
+            { game: "WWE 2K24", difficulty: 3, hours: 50, score: 150 },
+            { game: "Fallout 4", difficulty: 3, hours: 50, score: 150 },
+            { game: "Mafia III", difficulty: 3, hours: 50, score: 150 },
+            { game: "PUBG: Battlegrounds", difficulty: 2, hours: 75, score: 150 },
+            { game: "Mafia II", difficulty: 6, hours: 26, score: 156 },
+            { game: "Dead Space", difficulty: 4, hours: 40, score: 160 },
+            { game: "Grand Theft Auto: Vice City", difficulty: 4, hours: 40, score: 160 },
+            { game: "Injustice 2", difficulty: 4, hours: 40, score: 160 },
+            { game: "God of War", difficulty: 4, hours: 40, score: 160 },
+            { game: "Rise of the Tomb Raider", difficulty: 4, hours: 40, score: 160 },
+            { game: "The Last of Us Remastered", difficulty: 4, hours: 40, score: 160 },
+            { game: "Batman: Arkham Knight", difficulty: 4, hours: 40, score: 160 },
+            { game: "Ender Lilies: Quietus of the Knights", difficulty: 7, hours: 25, score: 175 },
+            { game: "Transformers: Devastation", difficulty: 7, hours: 25, score: 175 },
+            { game: "Uncharted: Legacy of Thieves Collection", difficulty: 5, hours: 35, score: 175 },
+            { game: "Minecraft Legends", difficulty: 6, hours: 30, score: 180 },
+            { game: "Borderlands 3", difficulty: 4, hours: 45, score: 180 },
+            { game: "Deus Ex: Mankind Divided", difficulty: 4, hours: 45, score: 180 },
+            { game: "F1 2021", difficulty: 3, hours: 60, score: 180 },
+            { game: "FIFA 22", difficulty: 3, hours: 65, score: 195 },
+            { game: "Furi", difficulty: 8, hours: 25, score: 200 },
+            { game: "FIFA 18", difficulty: 5, hours: 40, score: 200 },
+            { game: "Chivalry 2", difficulty: 5, hours: 40, score: 200 },
+            { game: "Planet Coaster", difficulty: 5, hours: 40, score: 200 },
+            { game: "Godfall", difficulty: 5, hours: 40, score: 200 },
+            { game: "Darksiders III", difficulty: 5, hours: 40, score: 200 },
+            { game: "Lords of the Fallen", difficulty: 5, hours: 40, score: 200 },
+            { game: "Driveclub", difficulty: 5, hours: 40, score: 200 },
+            { game: "Suicide Squad: Kill the Justice League", difficulty: 4, hours: 50, score: 200 },
+            { game: "PowerWash Simulator", difficulty: 4, hours: 50, score: 200 },
+            { game: "Grid Legends", difficulty: 4, hours: 50, score: 200 },
+            { game: "Need for Speed Heat", difficulty: 4, hours: 50, score: 200 },
+            { game: "Tom Clancy's Rainbow Six Extraction", difficulty: 4, hours: 50, score: 200 },
+            { game: "Persona 5 Strikers", difficulty: 4, hours: 50, score: 200 },
+            { game: "Mortal Kombat X", difficulty: 4, hours: 50, score: 200 },
+            { game: "Alienation", difficulty: 4, hours: 50, score: 200 },
+            { game: "Star Wars Battlefront", difficulty: 4, hours: 50, score: 200 },
+            { game: "Steep", difficulty: 7, hours: 30, score: 210 },
+            { game: "Need for Speed Hot Pursuit Remastered", difficulty: 6, hours: 35, score: 210 },
+            { game: "Immortals of Aveum", difficulty: 6, hours: 35, score: 210 },
+            { game: "Kingdoms of Amalur: Reckoning", difficulty: 3, hours: 70, score: 210 },
+            { game: "Assassin's Creed Shadows", difficulty: 3, hours: 70, score: 210 },
+            { game: "Skul: The Hero Slayer", difficulty: 7, hours: 31, score: 217 },
+            { game: "For Honor", difficulty: 4, hours: 55, score: 220 },
+            { game: "Payday 3", difficulty: 5, hours: 45, score: 225 },
+            { game: "Darksiders II", difficulty: 5, hours: 45, score: 225 },
+            { game: "Dreams", difficulty: 3, hours: 75, score: 225 },
+            { game: "Marvel Rivals", difficulty: 6, hours: 40, score: 240 },
+            { game: "Shadow of the Colossus", difficulty: 6, hours: 40, score: 240 },
+            { game: "BioShock 2", difficulty: 6, hours: 40, score: 240 },
+            { game: "LEGO 2K Drive", difficulty: 4, hours: 60, score: 240 },
+            { game: "Days Gone", difficulty: 4, hours: 60, score: 240 },
+            { game: "The First Descendant", difficulty: 3, hours: 80, score: 240 },
+            { game: "Final Fantasy XV", difficulty: 3, hours: 80, score: 240 },
+            { game: "The Texas Chain Saw Massacre", difficulty: 2, hours: 120, score: 240 },
+            { game: "Call of Duty: Vanguard", difficulty: 5, hours: 50, score: 250 },
+            { game: "Oddworld: Soulstorm", difficulty: 5, hours: 50, score: 250 },
+            { game: "Sniper Elite 4", difficulty: 5, hours: 50, score: 250 },
+            { game: "Remnant: From the Ashes", difficulty: 6, hours: 45, score: 270 },
+            { game: "Starwhal", difficulty: 6, hours: 45, score: 270 },
+            { game: "Until You Fall", difficulty: 7, hours: 40, score: 280 },
+            { game: "Dragon Age: The Veilguard", difficulty: 4, hours: 70, score: 280 },
+            { game: "Digimon Story Cyber Sleuth: Hacker's Memory", difficulty: 4, hours: 70, score: 280 },
+            { game: "Aliens: Dark Descent", difficulty: 5, hours: 60, score: 300 },
+            { game: "Final Fantasy VII Remake", difficulty: 5, hours: 60, score: 300 },
+            { game: "Star Wars Battlefront II", difficulty: 5, hours: 60, score: 300 },
+            { game: "Knockout City", difficulty: 3, hours: 100, score: 300 },
+            { game: "Grand Kingdom", difficulty: 3, hours: 100, score: 300 },
+            { game: "WipEout Omega Collection", difficulty: 8, hours: 40, score: 320 },
+            { game: "Bound", difficulty: 8, hours: 40, score: 320 },
+            { game: "OlliOlli World", difficulty: 7, hours: 50, score: 350 },
+            { game: "Conan Exiles", difficulty: 7, hours: 50, score: 350 },
+            { game: "Bloodborne", difficulty: 7, hours: 50, score: 350 },
+            { game: "Dragon Ball: The Breakers", difficulty: 5, hours: 70, score: 350 },
+            { game: "Nioh 2", difficulty: 5, hours: 70, score: 350 },
+            { game: "Mass Effect: Legendary Edition", difficulty: 6, hours: 60, score: 360 },
+            { game: "UFL", difficulty: 3, hours: 120, score: 360 },
+            { game: "Code Vein", difficulty: 5, hours: 75, score: 375 },
+            { game: "Hell Let Loose", difficulty: 4, hours: 95, score: 380 },
+            { game: "Plants vs. Zombies: Battle for Neighborville", difficulty: 3, hours: 130, score: 390 },
+            { game: "Yakuza: Like A Dragon", difficulty: 5, hours: 80, score: 400 },
+            { game: "Fallout 76", difficulty: 4, hours: 100, score: 400 },
+            { game: "Worms Rumble", difficulty: 4, hours: 100, score: 400 },
+            { game: "Absolver", difficulty: 7, hours: 60, score: 420 },
+            { game: "FIFA 20", difficulty: 6, hours: 70, score: 420 },
+            { game: "Call of Duty: WWII", difficulty: 6, hours: 70, score: 420 },
+            { game: "Mad Max", difficulty: 5, hours: 85, score: 425 },
+            { game: "Hood: Outlaws and Legends", difficulty: 4, hours: 110, score: 440 },
+            { game: "F1 2019", difficulty: 6, hours: 75, score: 450 },
+            { game: "Persona 5", difficulty: 3, hours: 150, score: 450 },
+            { game: "Tennis World Tour 2", difficulty: 6, hours: 80, score: 480 },
+            { game: "Call of Duty: Black Ops Cold War", difficulty: 7, hours: 70, score: 490 },
+            { game: "Call of Duty: Infinite Warfare", difficulty: 7, hours: 70, score: 490 },
+            { game: "Loadout", difficulty: 5, hours: 100, score: 500 },
+            { game: "FIFA 19", difficulty: 9, hours: 60, score: 540 },
+            { game: "Just Cause 3", difficulty: 6, hours: 90, score: 540 },
+            { game: "Tony Hawk's Pro Skater 1 + 2", difficulty: 8, hours: 70, score: 560 },
+            { game: "Star Wars: Squadrons", difficulty: 7, hours: 85, score: 595 },
+            { game: "Fall Guys: Ultimate Knockout", difficulty: 10, hours: 60, score: 600 },
+            { game: "NHL 24", difficulty: 6, hours: 100, score: 600 },
+            { game: "EA Sports UFC 3", difficulty: 6, hours: 100, score: 600 },
+            { game: "Helldivers", difficulty: 6, hours: 100, score: 600 },
+            { game: "Battlefield 2042", difficulty: 5, hours: 120, score: 600 },
+            { game: "Grand Theft Auto V", difficulty: 4, hours: 150, score: 600 },
+            { game: "Predator: Hunting Grounds", difficulty: 4, hours: 150, score: 600 },
+            { game: "Trackmania Turbo", difficulty: 9, hours: 70, score: 630 },
+            { game: "Gran Turismo 7", difficulty: 7, hours: 90, score: 630 },
+            { game: "Curse of the Dead Gods", difficulty: 8, hours: 80, score: 640 },
+            { game: "Metal Gear Solid V: The Phantom Pain", difficulty: 5, hours: 130, score: 650 },
+            { game: "Overwatch 2", difficulty: 7, hours: 100, score: 700 },
+            { game: "F1 23", difficulty: 8, hours: 100, score: 800 },
+            { game: "Aliens: Fireteam Elite", difficulty: 8, hours: 100, score: 800 },
+            { game: "Call of Duty: Black Ops III", difficulty: 8, hours: 100, score: 800 },
+            { game: "Slay the Spire", difficulty: 8, hours: 100, score: 800 },
+            { game: "Badland", difficulty: 8, hours: 100, score: 800 },
+            { game: "Naruto to Boruto: Shinobi Striker", difficulty: 4, hours: 200, score: 800 },
+            { game: "Friday the 13th", difficulty: 4, hours: 200, score: 800 },
+            { game: "Trials Fusion", difficulty: 10, hours: 90, score: 900 },
+            { game: "Hollow Knight", difficulty: 9, hours: 100, score: 900 },
+            { game: "XCOM 2", difficulty: 9, hours: 100, score: 900 },
+            { game: "Tom Clancy's Rainbow Six Siege", difficulty: 6, hours: 150, score: 900 },
+            { game: "Dead by Daylight", difficulty: 6, hours: 150, score: 900 },
+            { game: "Super Meat Boy", difficulty: 10, hours: 100, score: 1000 },
+            { game: "Red Dead Redemption 2", difficulty: 5, hours: 200, score: 1000 },
+            { game: "Call of Duty: Black Ops 4", difficulty: 7, hours: 150, score: 1050 },
+            { game: "Black Desert", difficulty: 2, hours: 550, score: 1100 },
+            { game: "MLB The Show 19", difficulty: 8, hours: 150, score: 1200 },
+            { game: "Destiny 2", difficulty: 6, hours: 200, score: 1200 },
+            { game: "Monster Hunter World", difficulty: 4, hours: 300, score: 1200 },
+            { game: "Street Fighter V", difficulty: 10, hours: 150, score: 1500 },
+            { game: "Deep Rock Galactic", difficulty: 8, hours: 300, score: 2400 },
+            { game: "World of Tanks", difficulty: 6, hours: 500, score: 3000 },
+            { game: "NBA 2K16", difficulty: 8, hours: 400, score: 3200 },
+            { game: "NBA 2K20", difficulty: 10, hours: 350, score: 3500 }
+        ];
+
+        // Chart instances
+        let difficultyChart, scoreDistributionChart, scatterPlot, bubbleChart;
+        
+        // Filtered data
+        let filteredData = [...gameData];
+        
+        // Initialize the page
+        document.addEventListener('DOMContentLoaded', function() {
+            // Initialize charts
+            initCharts();
+            
+            // Render initial game cards
+            renderGameCards(filteredData);
+            
+            // Update statistics
+            updateStatistics(filteredData);
+            
+            // Set up event listeners
+            setupEventListeners();
+        });
+        
+        function initCharts() {
+            // Difficulty distribution chart
+            const difficultyCtx = document.getElementById('difficultyChart').getContext('2d');
+            difficultyChart = new Chart(difficultyCtx, {
+                type: 'bar',
+                data: {
+                    labels: Array.from({length: 10}, (_, i) => i + 1),
+                    datasets: [{
+                        label: 'Games by Difficulty',
+                        data: Array(10).fill(0),
+                        backgroundColor: [
+                            '#4ade80', '#60a5fa', '#fbbf24', '#f97316', '#ef4444',
+                            '#a855f7', '#ec4899', '#64748b', '#475569', '#1e293b'
+                        ],
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            ticks: {
+                                precision: 0
+                            }
+                        }
+                    },
+                    plugins: {
+                        legend: {
+                            display: false
+                        }
+                    }
+                }
+            });
+            
+            // Score distribution chart
+            const scoreCtx = document.getElementById('scoreDistributionChart').getContext('2d');
+            scoreDistributionChart = new Chart(scoreCtx, {
+                type: 'pie',
+                data: {
+                    labels: ['0-100', '101-200', '201-300', '301-400', '401-500', '501+'],
+                    datasets: [{
+                        data: [0, 0, 0, 0, 0, 0],
+                        backgroundColor: [
+                            '#4ade80',
+                            '#60a5fa',
+                            '#fbbf24',
+                            '#f97316',
+                            '#a855f7',
+                            '#ec4899'
+                        ],
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'bottom'
+                        }
+                    }
+                }
+            });
+            
+            // Scatter plot
+            const scatterCtx = document.getElementById('scatterPlot').getContext('2d');
+            scatterPlot = new Chart(scatterCtx, {
+                type: 'scatter',
+                data: {
+                    datasets: [{
+                        label: 'Games',
+                        data: [],
+                        backgroundColor: '#3b82f6',
+                        pointRadius: 6,
+                        pointHoverRadius: 8
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        x: {
+                            title: {
+                                display: true,
+                                text: 'Difficulty'
+                            },
+                            min: 1,
+                            max: 10
+                        },
+                        y: {
+                            title: {
+                                display: true,
+                                text: 'Score'
+                            }
+                        }
+                    },
+                    plugins: {
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    const game = context.raw.game;
+                                    return `${game} (Diff: ${context.raw.x}, Score: ${context.raw.y})`;
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+            
+            // Bubble chart
+            const bubbleCtx = document.getElementById('bubbleChart').getContext('2d');
+            bubbleChart = new Chart(bubbleCtx, {
+                type: 'bubble',
+                data: {
+                    datasets: [{
+                        label: 'Games',
+                        data: [],
+                        backgroundColor: 'rgba(59, 130, 246, 0.5)',
+                        borderColor: 'rgba(59, 130, 246, 1)',
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        x: {
+                            title: {
+                                display: true,
+                                text: 'Difficulty'
+                            },
+                            min: 1,
+                            max: 10
+                        },
+                        y: {
+                            title: {
+                                display: true,
+                                text: 'Score'
+                            }
+                        }
+                    },
+                    plugins: {
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    const game = context.raw.game;
+                                    return `${game} (Diff: ${context.raw.x}, Score: ${context.raw.y}, Hours: ${context.raw.r})`;
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+            
+            // Update charts with initial data
+            updateCharts(filteredData);
+        }
+        
+        function renderGameCards(games) {
+            const container = document.getElementById('gameContainer');
+            container.innerHTML = '';
+            
+            games.forEach(game => {
+                const card = document.createElement('div');
+                card.className = 'game-card bg-white rounded-xl shadow-md overflow-hidden transition duration-300 hover:shadow-lg';
+                
+                // Calculate value ratio (score per hour)
+                const valueRatio = (game.score / game.hours).toFixed(2);
+                
+                card.innerHTML = `
+                    <div class="p-5">
+                        <div class="flex justify-between items-start mb-2">
+                            <h3 class="text-lg font-semibold text-gray-800 truncate">${game.game}</h3>
+                            <span class="difficulty-${game.difficulty} text-white text-xs font-bold px-2 py-1 rounded-full">${game.difficulty}/10</span>
+                        </div>
+                        
+                        <div class="flex justify-between text-sm text-gray-600 mb-3">
+                            <span>${game.hours} hours</span>
+                            <span class="font-bold text-indigo-600">Score: ${game.score}</span>
+                        </div>
+                        
+                        <div class="w-full bg-gray-200 rounded-full h-2 mb-2">
+                            <div class="bg-indigo-600 h-2 rounded-full" style="width: ${Math.min(100, game.score / 35)}%"></div>
+                        </div>
+                        
+                        <div class="flex justify-between text-xs text-gray-500">
+                            <span>Value: ${valueRatio} pts/hr</span>
+                            <span>${getDifficultyLabel(game.difficulty)}</span>
+                        </div>
+                    </div>
+                `;
+                
+                container.appendChild(card);
+            });
+        }
+        
+        function getDifficultyLabel(difficulty) {
+            if (difficulty <= 2) return 'Easy';
+            if (difficulty <= 4) return 'Medium';
+            if (difficulty <= 6) return 'Hard';
+            if (difficulty <= 8) return 'Very Hard';
+            return 'Extreme';
+        }
+        
+        function updateStatistics(games) {
+            document.getElementById('totalGames').textContent = games.length;
+            
+            if (games.length === 0) {
+                document.getElementById('avgDifficulty').textContent = '0';
+                document.getElementById('avgHours').textContent = '0';
+                document.getElementById('avgScore').textContent = '0';
+                
+                // Clear top games
+                document.getElementById('topGame1').textContent = '-';
+                document.getElementById('topScore1').textContent = '0';
+                document.getElementById('topGame2').textContent = '-';
+                document.getElementById('topScore2').textContent = '0';
+                document.getElementById('topGame3').textContent = '-';
+                document.getElementById('topScore3').textContent = '0';
+                return;
+            }
+            
+            // Calculate averages
+            const avgDifficulty = (games.reduce((sum, game) => sum + game.difficulty, 0) / games.length).toFixed(1);
+            const avgHours = (games.reduce((sum, game) => sum + game.hours, 0) / games.length).toFixed(1);
+            const avgScore = (games.reduce((sum, game) => sum + game.score, 0) / games.length).toFixed(0);
+            
+            document.getElementById('avgDifficulty').textContent = avgDifficulty;
+            document.getElementById('avgHours').textContent = avgHours;
+            document.getElementById('avgScore').textContent = avgScore;
+            
+            // Get top 3 games by score
+            const sortedByScore = [...games].sort((a, b) => b.score - a.score);
+            
+            if (sortedByScore.length > 0) {
+                document.getElementById('topGame1').textContent = sortedByScore[0].game;
+                document.getElementById('topScore1').textContent = sortedByScore[0].score;
+            }
+            
+            if (sortedByScore.length > 1) {
+                document.getElementById('topGame2').textContent = sortedByScore[1].game;
+                document.getElementById('topScore2').textContent = sortedByScore[1].score;
+            }
+            
+            if (sortedByScore.length > 2) {
+                document.getElementById('topGame3').textContent = sortedByScore[2].game;
+                document.getElementById('topScore3').textContent = sortedByScore[2].score;
+            }
+        }
+        
+        function updateCharts(games) {
+            // Update difficulty distribution
+            const difficultyCounts = Array(10).fill(0);
+            games.forEach(game => {
+                difficultyCounts[game.difficulty - 1]++;
+            });
+            difficultyChart.data.datasets[0].data = difficultyCounts;
+            difficultyChart.update();
+            
+            // Update score distribution
+            const scoreRanges = [0, 0, 0, 0, 0, 0];
+            games.forEach(game => {
+                if (game.score <= 100) scoreRanges[0]++;
+                else if (game.score <= 200) scoreRanges[1]++;
+                else if (game.score <= 300) scoreRanges[2]++;
+                else if (game.score <= 400) scoreRanges[3]++;
+                else if (game.score <= 500) scoreRanges[4]++;
+                else scoreRanges[5]++;
+            });
+            scoreDistributionChart.data.datasets[0].data = scoreRanges;
+            scoreDistributionChart.update();
+            
+            // Update scatter plot
+            scatterPlot.data.datasets[0].data = games.map(game => ({
+                x: game.difficulty,
+                y: game.score,
+                game: game.game
+            }));
+            scatterPlot.update();
+            
+            // Update bubble chart
+            bubbleChart.data.datasets[0].data = games.map(game => ({
+                x: game.difficulty,
+                y: game.score,
+                r: Math.min(30, game.hours / 5), // Scale down bubble size
+                game: game.game
+            }));
+            bubbleChart.update();
+        }
+        
+        function setupEventListeners() {
+            // Difficulty range filter
+            const difficultyRange = document.getElementById('difficultyRange');
+            const difficultyValue = document.getElementById('difficultyValue');
+            
+            difficultyRange.addEventListener('input', function() {
+                const maxDifficulty = this.value;
+                difficultyValue.textContent = `1-${maxDifficulty}`;
+                applyFilters();
+            });
+            
+            // Hours range filter
+            const hoursRange = document.getElementById('hoursRange');
+            const hoursValue = document.getElementById('hoursValue');
+            
+            hoursRange.addEventListener('input', function() {
+                const maxHours = this.value;
+                hoursValue.textContent = `1-${maxHours}`;
+                applyFilters();
+            });
+            
+            // Score range filter
+            const scoreRange = document.getElementById('scoreRange');
+            const scoreValue = document.getElementById('scoreValue');
+            
+            scoreRange.addEventListener('input', function() {
+                const maxScore = this.value;
+                scoreValue.textContent = `10-${maxScore}`;
+                applyFilters();
+            });
+            
+            // Search input
+            const searchInput = document.getElementById('searchInput');
+            searchInput.addEventListener('input', function() {
+                applyFilters();
+            });
+            
+            // Reset filters button
+            document.getElementById('resetFilters').addEventListener('click', function() {
+                difficultyRange.value = 10;
+                difficultyValue.textContent = '1-10';
+                hoursRange.value = 550;
+                hoursValue.textContent = '1-550';
+                scoreRange.value = 3500;
+                scoreValue.textContent = '10-3500';
+                searchInput.value = '';
+                applyFilters();
+            });
+            
+            // Sort buttons
+            document.getElementById('sortByName').addEventListener('click', function() {
+                filteredData.sort((a, b) => a.game.localeCompare(b.game));
+                renderGameCards(filteredData);
+            });
+            
+            document.getElementById('sortByDifficulty').addEventListener('click', function() {
+                filteredData.sort((a, b) => a.difficulty - b.difficulty || b.score - a.score);
+                renderGameCards(filteredData);
+            });
+            
+            document.getElementById('sortByHours').addEventListener('click', function() {
+                filteredData.sort((a, b) => a.hours - b.hours || b.score - a.score);
+                renderGameCards(filteredData);
+            });
+            
+            document.getElementById('sortByScore').addEventListener('click', function() {
+                filteredData.sort((a, b) => b.score - a.score || a.difficulty - b.difficulty);
+                renderGameCards(filteredData);
+            });
+        }
+        
+        function applyFilters() {
+            const maxDifficulty = parseInt(document.getElementById('difficultyRange').value);
+            const maxHours = parseInt(document.getElementById('hoursRange').value);
+            const maxScore = parseInt(document.getElementById('scoreRange').value);
+            const searchQuery = document.getElementById('searchInput').value.toLowerCase();
+            
+            filteredData = gameData.filter(game => {
+                return game.difficulty <= maxDifficulty &&
+                       game.hours <= maxHours &&
+                       game.score <= maxScore &&
+                       game.game.toLowerCase().includes(searchQuery);
+            });
+            
+            renderGameCards(filteredData);
+            updateStatistics(filteredData);
+            updateCharts(filteredData);
+        }
+    </script>
+</body>
+</html>
